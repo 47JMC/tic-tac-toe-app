@@ -4,6 +4,9 @@ const userSchema = new Schema({
   id: { type: String, required: true, unique: true },
   username: { type: String, required: true },
   avatar: { type: String, required: true },
+  wins: { type: Number, default: 0 },
+  losses: { type: Number, default: 0 },
+  draws: { type: Number, default: 0 },
 });
 
 export default model("User", userSchema);

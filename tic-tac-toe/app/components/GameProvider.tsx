@@ -6,6 +6,7 @@ type Opponent = {
   id: string;
   username: string;
   avatar: string;
+  winRate: number;
 } | null;
 
 type GameContextType = {

@@ -23,6 +23,8 @@ function OpponentProfile() {
         className="rounded-full"
       />
       <p className="font-fredoka text-xl">@{opponent.username}</p>
+      <p className="font-fredoka text-xl">@{opponent.username}</p>
+      <p className="text-xs text-white">Win rate: {opponent.winRate}%</p>
     </div>
   );
 }

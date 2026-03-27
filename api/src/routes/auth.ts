@@ -147,9 +147,15 @@ router.get("/me", async (req, res) => {
 
   const user = await verifyToken(token);
 
-  if (!user) res.status(401).send("Unauthorised");
+  if (!user) {
+    res.status(401).send("Unauthorised");
+    return;
+  }
 
-  res.json(user);
+  const total = user.wins + user.losses + user.draws;
+  const winRate = total === 0 ? 0 : Math.round((user.wins / total) * 100);
+
+  res.json({ ...user, winRate });
 });
 
 export default router;

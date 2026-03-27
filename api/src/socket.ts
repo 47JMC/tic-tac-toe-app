@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 import cookie from "cookie";
 import { verifyToken } from "./routes/auth.js";
+import User from "./models/User.js";
 
 type Mark = "X" | "O";
 
@@ -24,7 +25,7 @@ const games: Record<string, Game> = {};
 let waitingPlayer: Socket | null = null;
 // ========================================
 
-function handleJoinGame(socket: Socket, io: Server) {
+async function handleJoinGame(socket: Socket, io: Server) {
   if (waitingPlayer && waitingPlayer.data.user.id !== socket.data.user.id) {
     const roomId = `${waitingPlayer.id}#${socket.id}`;
     socket.join(roomId);
@@ -36,13 +37,21 @@ function handleJoinGame(socket: Socket, io: Server) {
       players: { X: waitingPlayer.id, O: socket.id },
     };
 
+    const xUser = await User.findOne({ id: waitingPlayer.data.user.id }).lean();
+    const oUser = await User.findOne({ id: socket.data.user.id }).lean();
+
+    const getWinRate = (u: any) => {
+      const total = u.wins + u.losses + u.draws;
+      return total === 0 ? 0 : Math.round((u.wins / total) * 100);
+    };
+
     waitingPlayer.emit("start-game", {
       symbol: "X",
-      opponent: socket.data.user,
+      opponent: { ...oUser, winRate: getWinRate(oUser) },
     });
     socket.emit("start-game", {
       symbol: "O",
-      opponent: waitingPlayer.data.user,
+      opponent: { ...xUser, winRate: getWinRate(xUser) },
     });
 
     waitingPlayer = null;
@@ -81,9 +90,9 @@ export function initSocket(io: Server) {
   io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
 
-    socket.on("join-game", () => handleJoinGame(socket, io));
+    socket.on("join-game", async () => await handleJoinGame(socket, io));
 
-    socket.on("make-move", ({ index }: { index: number }) => {
+    socket.on("make-move", async ({ index }: { index: number }) => {
       if (typeof index !== "number" || index < 0 || index > 8) return;
 
       const roomId = Array.from(socket.rooms).find((r) => r !== socket.id);
@@ -100,10 +109,30 @@ export function initSocket(io: Server) {
       const result = checkWinner(game.board);
 
       if (result) {
-        io.to(roomId).emit("game-over", { result: result, board: game.board });
+        io.to(roomId).emit("game-over", { result, board: game.board });
+
+        if (result === "Draw") {
+          await User.updateOne({ id: game.players.X }, { $inc: { draws: 1 } });
+          await User.updateOne({ id: game.players.O }, { $inc: { draws: 1 } });
+        } else {
+          const winnerId = result === "X" ? game.players.X : game.players.O;
+          const loserId = result === "X" ? game.players.O : game.players.X;
+
+          // get socket user ids from socket.data.user
+          const winnerSocket = io.sockets.sockets.get(winnerId);
+          const loserSocket = io.sockets.sockets.get(loserId);
+
+          await User.updateOne(
+            { id: winnerSocket?.data.user.id },
+            { $inc: { wins: 1 } },
+          );
+          await User.updateOne(
+            { id: loserSocket?.data.user.id },
+            { $inc: { losses: 1 } },
+          );
+        }
 
         delete games[roomId];
-        return;
       }
 
       game.turn = game.turn === "X" ? "O" : "X";
@@ -114,7 +143,7 @@ export function initSocket(io: Server) {
       });
     });
 
-    socket.on("play-again", () => handleJoinGame(socket, io));
+    socket.on("play-again", async () => await handleJoinGame(socket, io));
 
     socket.on("disconnect", () => {
       if (waitingPlayer?.id === socket.id) waitingPlayer = null;

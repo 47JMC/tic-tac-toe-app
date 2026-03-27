@@ -66,7 +66,12 @@ export default function Game() {
         opponent,
       }: {
         symbol: "X" | "O";
-        opponent: { id: string; username: string; avatar: string };
+        opponent: {
+          id: string;
+          username: string;
+          avatar: string;
+          winRate: number;
+        };
       }) => {
         setBoard(Array(9).fill(""));
         setWinnerWithRef(null);
