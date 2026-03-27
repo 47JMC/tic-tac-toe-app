@@ -18,7 +18,7 @@ router.get("/login", (req, res) => {
   }
 
   res.redirect(
-    `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}`,
+    `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=identify`,
   );
 });
 
