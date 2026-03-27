@@ -1,0 +1,121 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+import { useGameContext } from "./GameProvider";
+
+export default function Game() {
+  const [status, setStatus] = useState("Connecting to server...");
+  const [board, setBoard] = useState(Array(9).fill(""));
+  const [currentTurn, setCurrentTurn] = useState<"X" | "O">("X");
+  const [playerSymbol, setPlayerSymbol] = useState<"X" | "O" | null>(null);
+  const [winner, setWinner] = useState<string | null>(null);
+  const playerSymbolRef = useRef<"X" | "O" | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const { setOpponent } = useGameContext();
+
+  const handleClick = (index: number) => {
+    if (!socketRef.current || winner || playerSymbol !== currentTurn) return;
+    socketRef.current.emit("make-move", { index });
+  };
+
+  useEffect(() => {
+    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL!, {
+      withCredentials: true,
+    });
+
+    socketRef.current.on("connect", () => {
+      socketRef.current?.emit("join-game");
+      setStatus("Searching for players...");
+    });
+
+    socketRef.current.on(
+      "start-game",
+      ({
+        symbol,
+        opponent,
+      }: {
+        symbol: "X" | "O";
+        opponent: { id: string; username: string; avatar: string };
+      }) => {
+        setBoard(Array(9).fill(""));
+        setWinner(null);
+        setCurrentTurn("X");
+        setPlayerSymbol(symbol);
+        playerSymbolRef.current = symbol;
+        setOpponent(opponent);
+        setStatus(symbol === "X" ? "Your turn" : "Opponent's turn");
+      },
+    );
+
+    socketRef.current.on(
+      "move-made",
+      ({ board, nextTurn }: { board: string[]; nextTurn: "X" | "O" }) => {
+        setBoard(board);
+        setCurrentTurn(nextTurn);
+        setStatus(
+          nextTurn === playerSymbolRef.current
+            ? "Your turn"
+            : "Opponent's turn",
+        );
+      },
+    );
+
+    socketRef.current.on(
+      "game-over",
+      ({ result, board }: { result: string; board: string[] }) => {
+        setBoard(board);
+        setWinner(result);
+        if (result === "Draw") setStatus("It's a draw!");
+        else if (result === playerSymbolRef.current) setStatus("You win!");
+        else setStatus("You lose!");
+      },
+    );
+
+    socketRef.current.on("opponent-left", () => {
+      setStatus("Opponent disconnected.");
+      setWinner("opponent-left");
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center">
+      <p className="text-lg mb-2 text-yellow-400 font-medium">{status}</p>
+      <p className="text-sm mb-4 text-slate-400">
+        You are: <span className="font-semibold">{playerSymbol}</span>
+      </p>
+      <div className="grid grid-cols-3 gap-3 bg-slate-900 p-4 rounded-2xl shadow-lg">
+        {board.map((cell, index) => (
+          <div
+            key={index}
+            onClick={() => handleClick(index)}
+            className={`h-20 w-20 flex items-center justify-center text-3xl font-fredoka rounded-xl border-2 border-slate-600 bg-slate-800 transition-all duration-200
+              ${playerSymbol === currentTurn ? "cursor-pointer hover:bg-slate-700 hover:border-blue-600" : "opacity-50 cursor-not-allowed"}`}
+          >
+            <span
+              className={
+                cell === "X"
+                  ? "text-blue-400"
+                  : cell === "O"
+                    ? "text-pink-400"
+                    : ""
+              }
+            >
+              {cell}
+            </span>
+          </div>
+        ))}
+      </div>
+      <button
+        className="mt-6 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
+        onClick={() => socketRef.current?.emit("play-again")}
+      >
+        Play Again
+      </button>
+    </div>
+  );
+}
