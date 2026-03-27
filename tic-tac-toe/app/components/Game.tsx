@@ -10,17 +10,34 @@ export default function Game() {
   const [currentTurn, setCurrentTurn] = useState<"X" | "O">("X");
   const [playerSymbol, setPlayerSymbol] = useState<"X" | "O" | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
+
   const playerSymbolRef = useRef<"X" | "O" | null>(null);
+  const currentTurnRef = useRef<"X" | "O">("X");
+  const winnerRef = useRef<string | null>(null);
+
   const socketRef = useRef<Socket | null>(null);
   const { setOpponent } = useGameContext();
 
+  const setCurrentTurnWithRef = (turn: "X" | "O") => {
+    currentTurnRef.current = turn;
+    setCurrentTurn(turn);
+  };
+
+  const setWinnerWithRef = (w: string | null) => {
+    winnerRef.current = w;
+    setWinner(w);
+  };
+
   const handleClick = (index: number) => {
-    if (!socketRef.current || winner || playerSymbol !== currentTurn) return;
+    if (!socketRef.current) return;
+    if (winnerRef.current) return;
+    if (playerSymbolRef.current !== currentTurnRef.current) return;
+
     socketRef.current.emit("make-move", { index });
   };
 
   const findNewOpponent = () => {
-    setWinner(null);
+    setWinnerWithRef(null);
     setBoard(Array(9).fill(""));
     setOpponent(null);
     setStatus("Searching for players...");
@@ -47,8 +64,8 @@ export default function Game() {
         opponent: { id: string; username: string; avatar: string };
       }) => {
         setBoard(Array(9).fill(""));
-        setWinner(null);
-        setCurrentTurn("X");
+        setWinnerWithRef(null);
+        setCurrentTurnWithRef("X");
         setPlayerSymbol(symbol);
         playerSymbolRef.current = symbol;
         setOpponent(opponent);
@@ -60,7 +77,7 @@ export default function Game() {
       "move-made",
       ({ board, nextTurn }: { board: string[]; nextTurn: "X" | "O" }) => {
         setBoard(board);
-        setCurrentTurn(nextTurn);
+        setCurrentTurnWithRef(nextTurn);
         setStatus(
           nextTurn === playerSymbolRef.current
             ? "Your turn"
@@ -73,7 +90,7 @@ export default function Game() {
       "game-over",
       ({ result, board }: { result: string; board: string[] }) => {
         setBoard(board);
-        setWinner(result);
+        setWinnerWithRef(result);
         if (result === "Draw") setStatus("It's a draw!");
         else if (result === playerSymbolRef.current) setStatus("You win! 🎉");
         else setStatus("You lose 😢");
@@ -82,7 +99,7 @@ export default function Game() {
 
     socketRef.current.on("opponent-left", () => {
       setStatus("Opponent disconnected.");
-      setWinner("opponent-left");
+      setWinnerWithRef("opponent-left");
       setOpponent(null);
     });
 
