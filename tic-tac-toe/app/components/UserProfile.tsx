@@ -36,7 +36,6 @@ function UserProfile() {
         <>
           <div className="flex flex-col justify-center">
             <p className="font-fredoka text-xl">@{userData.username}</p>
-            <p className="font-fredoka text-xl">@{userData.username}</p>
             <p className="text-xs text-slate-300">
               Win rate: {userData.winRate}%
             </p>
