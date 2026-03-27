@@ -10,11 +10,11 @@ export default function Game() {
   const [currentTurn, setCurrentTurn] = useState<"X" | "O">("X");
   const [playerSymbol, setPlayerSymbol] = useState<"X" | "O" | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
 
   const playerSymbolRef = useRef<"X" | "O" | null>(null);
   const currentTurnRef = useRef<"X" | "O">("X");
   const winnerRef = useRef<string | null>(null);
-
   const socketRef = useRef<Socket | null>(null);
   const { setOpponent } = useGameContext();
 
@@ -32,16 +32,22 @@ export default function Game() {
     if (!socketRef.current) return;
     if (winnerRef.current) return;
     if (playerSymbolRef.current !== currentTurnRef.current) return;
-
     socketRef.current.emit("make-move", { index });
+  };
+
+  const findGame = () => {
+    setSearching(true);
+    setStatus("Searching for players...");
+    socketRef.current?.emit("join-game");
   };
 
   const findNewOpponent = () => {
     setWinnerWithRef(null);
     setBoard(Array(9).fill(""));
     setOpponent(null);
-    setStatus("Searching for players...");
-    socketRef.current?.emit("join-game");
+    setPlayerSymbol(null);
+    playerSymbolRef.current = null;
+    findGame();
   };
 
   useEffect(() => {
@@ -50,8 +56,7 @@ export default function Game() {
     });
 
     socketRef.current.on("connect", () => {
-      socketRef.current?.emit("join-game");
-      setStatus("Searching for players...");
+      setStatus("Connected.");
     });
 
     socketRef.current.on(
@@ -69,6 +74,7 @@ export default function Game() {
         setPlayerSymbol(symbol);
         playerSymbolRef.current = symbol;
         setOpponent(opponent);
+        setSearching(false);
         setStatus(symbol === "X" ? "Your turn" : "Opponent's turn");
       },
     );
@@ -111,50 +117,76 @@ export default function Game() {
   return (
     <div className="flex flex-col items-center">
       <p className="text-lg mb-2 text-yellow-400 font-medium">{status}</p>
-      <p className="text-sm mb-4 text-slate-400">
-        You are: <span className="font-semibold">{playerSymbol}</span>
-      </p>
 
-      <div className="grid grid-cols-3 gap-3 bg-slate-900 p-4 rounded-2xl shadow-lg">
-        {board.map((cell, index) => (
-          <div
-            key={index}
-            onClick={() => handleClick(index)}
-            className={`h-20 w-20 flex items-center justify-center text-3xl font-fredoka rounded-xl border-2 border-slate-600 bg-slate-800 transition-all duration-200
-              ${playerSymbol === currentTurn && !winner ? "cursor-pointer hover:bg-slate-700 hover:border-blue-600" : "opacity-50 cursor-not-allowed"}`}
-          >
-            <span
-              className={
-                cell === "X"
-                  ? "text-blue-400"
-                  : cell === "O"
-                    ? "text-pink-400"
-                    : ""
-              }
-            >
-              {cell}
-            </span>
+      {!playerSymbol && !searching && (
+        <button
+          onClick={findGame}
+          className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
+        >
+          Find Game
+        </button>
+      )}
+
+      {searching && (
+        <p className="text-slate-400 font-medium animate-pulse">
+          Waiting for opponent...
+        </p>
+      )}
+
+      {playerSymbol && (
+        <>
+          <p className="text-sm mb-4 text-slate-400">
+            You are: <span className="font-semibold">{playerSymbol}</span>
+          </p>
+
+          <div className="grid grid-cols-3 gap-3 bg-slate-900 p-4 rounded-2xl shadow-lg">
+            {board.map((cell, index) => (
+              <div
+                key={index}
+                onClick={() => handleClick(index)}
+                className={`h-20 w-20 flex items-center justify-center text-3xl font-fredoka rounded-xl border-2 border-slate-600 bg-slate-800 transition-all duration-200
+                  ${playerSymbol === currentTurn && !winner ? "cursor-pointer hover:bg-slate-700 hover:border-blue-600" : "opacity-50 cursor-not-allowed"}`}
+              >
+                <span
+                  className={
+                    cell === "X"
+                      ? "text-blue-400"
+                      : cell === "O"
+                        ? "text-pink-400"
+                        : ""
+                  }
+                >
+                  {cell}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="mt-6">
-        {winner === "opponent-left" ? (
-          <button
-            onClick={findNewOpponent}
-            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
-          >
-            Find New Opponent
-          </button>
-        ) : winner ? (
-          <button
-            onClick={() => socketRef.current?.emit("play-again")}
-            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
-          >
-            Play Again
-          </button>
-        ) : null}
-      </div>
+          <div className="mt-6">
+            {winner === "opponent-left" ? (
+              <button
+                onClick={findNewOpponent}
+                className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
+              >
+                Find New Opponent
+              </button>
+            ) : winner ? (
+              <button
+                onClick={() => {
+                  setWinnerWithRef(null);
+                  setBoard(Array(9).fill(""));
+                  setSearching(true);
+                  setStatus("Searching for players...");
+                  socketRef.current?.emit("play-again");
+                }}
+                className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
+              >
+                Play Again
+              </button>
+            ) : null}
+          </div>
+        </>
+      )}
     </div>
   );
 }
