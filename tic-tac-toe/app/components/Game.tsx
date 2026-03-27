@@ -19,6 +19,14 @@ export default function Game() {
     socketRef.current.emit("make-move", { index });
   };
 
+  const findNewOpponent = () => {
+    setWinner(null);
+    setBoard(Array(9).fill(""));
+    setOpponent(null);
+    setStatus("Searching for players...");
+    socketRef.current?.emit("join-game");
+  };
+
   useEffect(() => {
     socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL!, {
       withCredentials: true,
@@ -67,14 +75,15 @@ export default function Game() {
         setBoard(board);
         setWinner(result);
         if (result === "Draw") setStatus("It's a draw!");
-        else if (result === playerSymbolRef.current) setStatus("You win!");
-        else setStatus("You lose!");
+        else if (result === playerSymbolRef.current) setStatus("You win! 🎉");
+        else setStatus("You lose 😢");
       },
     );
 
     socketRef.current.on("opponent-left", () => {
       setStatus("Opponent disconnected.");
       setWinner("opponent-left");
+      setOpponent(null);
     });
 
     return () => {
@@ -88,13 +97,14 @@ export default function Game() {
       <p className="text-sm mb-4 text-slate-400">
         You are: <span className="font-semibold">{playerSymbol}</span>
       </p>
+
       <div className="grid grid-cols-3 gap-3 bg-slate-900 p-4 rounded-2xl shadow-lg">
         {board.map((cell, index) => (
           <div
             key={index}
             onClick={() => handleClick(index)}
             className={`h-20 w-20 flex items-center justify-center text-3xl font-fredoka rounded-xl border-2 border-slate-600 bg-slate-800 transition-all duration-200
-              ${playerSymbol === currentTurn ? "cursor-pointer hover:bg-slate-700 hover:border-blue-600" : "opacity-50 cursor-not-allowed"}`}
+              ${playerSymbol === currentTurn && !winner ? "cursor-pointer hover:bg-slate-700 hover:border-blue-600" : "opacity-50 cursor-not-allowed"}`}
           >
             <span
               className={
@@ -110,12 +120,24 @@ export default function Game() {
           </div>
         ))}
       </div>
-      <button
-        className="mt-6 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
-        onClick={() => socketRef.current?.emit("play-again")}
-      >
-        Play Again
-      </button>
+
+      <div className="mt-6">
+        {winner === "opponent-left" ? (
+          <button
+            onClick={findNewOpponent}
+            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
+          >
+            Find New Opponent
+          </button>
+        ) : winner ? (
+          <button
+            onClick={() => socketRef.current?.emit("play-again")}
+            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
+          >
+            Play Again
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

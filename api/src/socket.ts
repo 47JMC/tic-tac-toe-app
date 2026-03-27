@@ -25,7 +25,7 @@ let waitingPlayer: Socket | null = null;
 // ========================================
 
 function handleJoinGame(socket: Socket, io: Server) {
-  if (waitingPlayer) {
+  if (waitingPlayer && waitingPlayer.id !== socket.id) {
     const roomId = `${waitingPlayer.id}#${socket.id}`;
     socket.join(roomId);
     waitingPlayer.join(roomId);
@@ -117,17 +117,13 @@ export function initSocket(io: Server) {
     socket.on("play-again", () => handleJoinGame(socket, io));
 
     socket.on("disconnect", () => {
-      if (waitingPlayer?.id === socket.id) {
-        waitingPlayer = null;
-      }
+      if (waitingPlayer?.id === socket.id) waitingPlayer = null;
 
-      // remove any game this player was part of
       for (const roomId in games) {
         const game = games[roomId];
-
         if (game.players.X === socket.id || game.players.O === socket.id) {
+          socket.to(roomId).emit("opponent-left");
           delete games[roomId];
-          console.log("Game removed:", roomId);
         }
       }
     });
