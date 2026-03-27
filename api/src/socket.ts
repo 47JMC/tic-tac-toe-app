@@ -25,7 +25,7 @@ let waitingPlayer: Socket | null = null;
 // ========================================
 
 function handleJoinGame(socket: Socket, io: Server) {
-  if (waitingPlayer && waitingPlayer.id !== socket.id) {
+  if (waitingPlayer && waitingPlayer.data.user.id !== socket.data.user.id) {
     const roomId = `${waitingPlayer.id}#${socket.id}`;
     socket.join(roomId);
     waitingPlayer.join(roomId);
