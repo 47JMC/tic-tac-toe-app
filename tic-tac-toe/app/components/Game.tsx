@@ -80,7 +80,7 @@ export default function Game() {
     return () => {
       socketRef.current?.disconnect();
     };
-  }, []);
+  }, [setOpponent]);
 
   return (
     <div className="flex flex-col items-center">

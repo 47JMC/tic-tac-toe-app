@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 type UserData = {
   id: string;
@@ -54,7 +55,11 @@ function UserProfile() {
           />
         </>
       ) : (
-        <p>Not logged in</p>
+        <button className="rounded-lg p-2 m-2 bg-green-500 hover:bg-green-700 transition-colors">
+          <Link href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`}>
+            Login
+          </Link>
+        </button>
       )}
     </div>
   );
