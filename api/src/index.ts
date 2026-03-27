@@ -12,21 +12,23 @@ import authRouter from "./routes/auth.js";
 
 const app = express();
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "http://localhost:3000", credentials: true },
-});
+const { FRONTEND_URL, MONGODB_URI } = process.env;
 
-if (!process.env.MONGODB_URI) {
-  throw new Error("MONGODB_URI is not defined in environment variables");
+if (!FRONTEND_URL || !MONGODB_URI) {
+  throw new Error("FRONTEND URL or MONGODB_URI is not set");
 }
 
-mongoose.connect(process.env.MONGODB_URI);
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: FRONTEND_URL, credentials: true },
+});
+
+mongoose.connect(MONGODB_URI);
 initSocket(io);
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 
 app.use("/auth", authRouter);
 

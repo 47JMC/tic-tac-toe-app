@@ -11,24 +11,31 @@ type User = {
 };
 
 router.get("/login", (req, res) => {
-  const { CLIENT_ID } = process.env;
+  const { CLIENT_ID, REDIRECT_URI } = process.env;
 
-  if (!CLIENT_ID) {
-    return res.status(500).json({ error: "Client ID or not set" });
+  if (!CLIENT_ID || !REDIRECT_URI) {
+    return res.status(500).json({ error: "Client ID or Redirect_URI not set" });
   }
 
   res.redirect(
-    `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A4000%2Fauth%2Fcallback&scope=identify`,
+    `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}`,
   );
 });
 
 router.get("/callback", async (req, res) => {
-  const { CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, JWT_SECRET } = process.env;
+  const { CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, JWT_SECRET, FRONTEND_URL } =
+    process.env;
 
-  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI || !JWT_SECRET) {
-    return res
-      .status(500)
-      .json({ error: "Client ID, Client Secret, or Redirect URI not set" });
+  if (
+    !CLIENT_ID ||
+    !CLIENT_SECRET ||
+    !REDIRECT_URI ||
+    !JWT_SECRET ||
+    !FRONTEND_URL
+  ) {
+    return res.status(500).json({
+      error: "Client ID, Client Secret, Redirect URI or Frontend URL not set",
+    });
   }
 
   const { code } = req.query;
@@ -102,7 +109,7 @@ router.get("/callback", async (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
-  res.redirect("http://localhost:3000"); // Redirect to frontend after login
+  res.redirect(FRONTEND_URL); // Redirect to frontend after login
 });
 
 router.get("/logout", (req, res) => {
