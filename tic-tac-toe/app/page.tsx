@@ -7,9 +7,11 @@ function Page() {
   return (
     <GameProvider>
       <div className="min-h-screen flex flex-col bg-slate-950 text-white">
-        <nav className="flex items-center justify-between px-6 py-4">
+        <nav className="flex items-center justify-between px-3 py-2">
           <OpponentProfile />
-          <h1 className="text-3xl font-bold tracking-wide">Tic Tac Toe</h1>
+          <h1 className="text-lg sm:text-3xl font-bold tracking-wide whitespace-nowrap">
+            Tic Tac Toe
+          </h1>
           <UserProfile />
         </nav>
         <div className="flex flex-col items-center justify-center flex-1">

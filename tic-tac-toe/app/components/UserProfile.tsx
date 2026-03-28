@@ -1,3 +1,4 @@
+// UserProfile.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,7 +9,7 @@ type UserData = {
   id: string;
   username: string;
   avatar: string;
-  winRate: number;
+  winRate: number | null;
 };
 
 function UserProfile() {
@@ -34,11 +35,11 @@ function UserProfile() {
     <div className="flex gap-2 bg-linear-to-r items-center from-sky-900 to-indigo-950 transition-colors rounded-lg p-1 m-1 border-2 border-purple-950 hover:border-blue-700">
       {userData ? (
         <>
-          <div className="flex flex-col justify-center">
+          <div className="hidden sm:flex flex-col justify-center">
             <p className="font-fredoka text-xl">@{userData.username}</p>
             <p className="text-xs text-slate-300">
               {userData.winRate === null
-                ? "Play atleast 10 games"
+                ? "Play at least 10 games"
                 : `Win rate: ${userData.winRate}%`}
             </p>
             <button
@@ -47,7 +48,7 @@ function UserProfile() {
                   credentials: "include",
                 })
               }
-              className="hover:bg-red-500 transition-all p-1 rounded-lg"
+              className="hover:bg-red-500 transition-all p-1 rounded-lg text-sm"
             >
               Logout
             </button>
@@ -55,13 +56,13 @@ function UserProfile() {
           <Image
             src={`https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.webp?size=80`}
             alt={userData.username}
-            width={80}
-            height={80}
-            className="rounded-full"
+            width={48}
+            height={48}
+            className="rounded-full w-10 h-10 sm:w-16 sm:h-16"
           />
         </>
       ) : (
-        <button className="rounded-lg p-2 m-2 bg-green-500 hover:bg-green-700 transition-colors">
+        <button className="rounded-lg p-2 m-2 bg-green-500 hover:bg-green-700 transition-colors text-sm">
           <Link href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`}>
             Login
           </Link>
