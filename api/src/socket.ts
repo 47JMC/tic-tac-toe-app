@@ -171,6 +171,15 @@ export function initSocket(io: Server) {
 
     socket.on("play-again", async () => handleJoinGame(socket, io));
 
+    socket.on("leave-game", () => {
+      const roomId = Array.from(socket.rooms).find((r) => r !== socket.id);
+      if (roomId) {
+        socket.to(roomId).emit("opponent-left");
+        socket.leave(roomId);
+        delete games[roomId];
+      }
+    });
+
     socket.on("disconnect", () => {
       if (waitingPlayer?.id === socket.id) waitingPlayer = null;
 

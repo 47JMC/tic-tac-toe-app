@@ -42,6 +42,7 @@ export default function Game() {
   };
 
   const findNewOpponent = () => {
+    socketRef.current?.emit("leave-game"); // notify server first
     setWinnerWithRef(null);
     setBoard(Array(9).fill(""));
     setOpponent(null);
