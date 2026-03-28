@@ -46,7 +46,6 @@ function handleJoinGame(socket: Socket, io: Server) {
 
     const getWinRate = (u: any) => {
       const total = u.wins + u.losses + u.draws;
-      console.log(u.wins);
       if (total < 10) return null;
       return Math.round((u.wins / total) * 100);
     };
