@@ -113,8 +113,14 @@ router.get("/callback", async (req, res) => {
 });
 
 router.get("/logout", (req, res) => {
+  const { FRONTEND_URL } = process.env;
+
+  if (!FRONTEND_URL) {
+    return res.status(500).json({ error: "Frontend URL not set" });
+  }
+
   res.clearCookie("token");
-  res.json({ message: "Logged out successfully" });
+  res.redirect(FRONTEND_URL);
 });
 
 export async function verifyToken(token: string) {
