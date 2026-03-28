@@ -42,15 +42,12 @@ function UserProfile() {
                 ? "Play at least 10 games"
                 : `Win rate: ${userData.winRate}%`}
             </p>
-            <button
-              onClick={() =>
-                fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/logout`, {
-                  credentials: "include",
-                })
-              }
-              className="hover:bg-red-500 transition-all p-1 rounded-lg text-sm"
-            >
-              Logout
+            <button className="hover:bg-red-500 transition-all p-1 rounded-lg text-sm">
+              <Link
+                href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/logout`}
+              >
+                Logout
+              </Link>
             </button>
           </div>
           <Image
