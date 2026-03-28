@@ -29,7 +29,7 @@ const games: Record<string, Game> = {};
 let waitingPlayer: Socket | null = null;
 // ========================================
 
-async function handleJoinGame(socket: Socket, io: Server) {
+function handleJoinGame(socket: Socket, io: Server) {
   if (
     waitingPlayer &&
     (waitingPlayer.data.user.id !== socket.data.user.id || DEV_MODE)
@@ -44,21 +44,26 @@ async function handleJoinGame(socket: Socket, io: Server) {
       players: { X: waitingPlayer.id, O: socket.id },
     };
 
-    const xUser = await User.findOne({ id: waitingPlayer.data.user.id }).lean();
-    const oUser = await User.findOne({ id: socket.data.user.id }).lean();
-
     const getWinRate = (u: any) => {
       const total = u.wins + u.losses + u.draws;
-      return total === 0 ? 0 : Math.round((u.wins / total) * 100);
+      console.log(u.wins);
+      if (total < 10) return null;
+      return Math.round((u.wins / total) * 100);
     };
+
+    const xUser = waitingPlayer.data.user;
+    const oUser = socket.data.user;
 
     waitingPlayer.emit("start-game", {
       symbol: "X",
-      opponent: { ...oUser, winRate: getWinRate(oUser) },
+      opponent: { ...oUser, winRate: getWinRate(xUser) },
     });
     socket.emit("start-game", {
       symbol: "O",
-      opponent: { ...xUser, winRate: getWinRate(xUser) },
+      opponent: {
+        ...xUser,
+        winRate: getWinRate(oUser),
+      },
     });
 
     waitingPlayer = null;
@@ -84,7 +89,7 @@ export function initSocket(io: Server) {
     const cookies = cookie.parse(socket.handshake.headers.cookie || "");
     const token = cookies.token;
 
-    if (!token) return null;
+    if (!token) return new Error("Unauthorized");
 
     const user = await verifyToken(token);
 
@@ -97,7 +102,7 @@ export function initSocket(io: Server) {
   io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
 
-    socket.on("join-game", async () => await handleJoinGame(socket, io));
+    socket.on("join-game", async () => handleJoinGame(socket, io));
 
     socket.on("make-move", async ({ index }: { index: number }) => {
       if (typeof index !== "number" || index < 0 || index > 8) return;
@@ -119,8 +124,18 @@ export function initSocket(io: Server) {
         io.to(roomId).emit("game-over", { result, board: game.board });
 
         if (result === "Draw") {
-          await User.updateOne({ id: game.players.X }, { $inc: { draws: 1 } });
-          await User.updateOne({ id: game.players.O }, { $inc: { draws: 1 } });
+          const xSocket = io.sockets.sockets.get(game.players.X);
+          const oSocket = io.sockets.sockets.get(game.players.O);
+          await User.updateOne(
+            { id: xSocket?.data.user.id },
+            { $inc: { draws: 1 } },
+          );
+          await User.updateOne(
+            { id: oSocket?.data.user.id },
+            { $inc: { draws: 1 } },
+          );
+          if (xSocket) xSocket.data.user.draws += 1;
+          if (oSocket) oSocket.data.user.draws += 1;
         } else {
           const winnerId = result === "X" ? game.players.X : game.players.O;
           const loserId = result === "X" ? game.players.O : game.players.X;
@@ -137,6 +152,9 @@ export function initSocket(io: Server) {
             { id: loserSocket?.data.user.id },
             { $inc: { losses: 1 } },
           );
+
+          if (winnerSocket) winnerSocket.data.user.wins += 1;
+          if (loserSocket) loserSocket.data.user.losses += 1;
         }
 
         delete games[roomId];
@@ -151,7 +169,7 @@ export function initSocket(io: Server) {
       });
     });
 
-    socket.on("play-again", async () => await handleJoinGame(socket, io));
+    socket.on("play-again", async () => handleJoinGame(socket, io));
 
     socket.on("disconnect", () => {
       if (waitingPlayer?.id === socket.id) waitingPlayer = null;

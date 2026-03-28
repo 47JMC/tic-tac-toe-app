@@ -24,7 +24,11 @@ function OpponentProfile() {
       />
       <div className="flex flex-col justify-center">
         <p className="font-fredoka text-xl">@{opponent.username}</p>
-        <p className="text-xs text-slate-300">Win rate: {opponent.winRate}%</p>
+        <p className="text-xs text-slate-300">
+          {opponent.winRate === null
+            ? "Play 10 games"
+            : `Win rate: ${opponent.winRate}%`}
+        </p>
       </div>
     </div>
   );

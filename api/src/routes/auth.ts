@@ -153,7 +153,7 @@ router.get("/me", async (req, res) => {
   }
 
   const total = user.wins + user.losses + user.draws;
-  const winRate = total === 0 ? 0 : Math.round((user.wins / total) * 100);
+  const winRate = total < 10 ? null : Math.round((user.wins / total) * 100);
 
   res.json({ ...user, winRate });
 });
