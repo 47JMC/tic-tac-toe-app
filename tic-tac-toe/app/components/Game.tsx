@@ -97,16 +97,13 @@ export default function Game() {
       },
     );
 
-    socketRef.current.on(
-      "game-over",
-      ({ result, board }: { result: string; board: string[] }) => {
-        setBoard(board);
-        setWinnerWithRef(result);
-        if (result === "Draw") setStatus("It's a draw!");
-        else if (result === playerSymbolRef.current) setStatus("You win! 🎉");
-        else setStatus("You lose 😢");
-      },
-    );
+    socketRef.current.on("game-over", ({ result, board }) => {
+      setBoard(board);
+      setWinnerWithRef(result);
+      if (result === "Draw") setStatus("It's a draw!");
+      else if (result === playerSymbolRef.current) setStatus("You win! 🎉");
+      else setStatus("You lose 😢");
+    });
 
     socketRef.current.on("opponent-left", () => {
       setStatus("Opponent disconnected.");

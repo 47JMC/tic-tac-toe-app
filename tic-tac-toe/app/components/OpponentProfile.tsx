@@ -22,8 +22,10 @@ function OpponentProfile() {
         height={80}
         className="rounded-full"
       />
-      <p className="font-fredoka text-xl">@{opponent.username}</p>
-      <p className="text-xs text-white">Win rate: {opponent.winRate}%</p>
+      <div className="flex flex-col justify-center">
+        <p className="font-fredoka text-xl">@{opponent.username}</p>
+        <p className="text-xs text-slate-300">Win rate: {opponent.winRate}%</p>
+      </div>
     </div>
   );
 }

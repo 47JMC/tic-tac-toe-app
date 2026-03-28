@@ -1,7 +1,11 @@
 import { Server, Socket } from "socket.io";
 import cookie from "cookie";
 import { verifyToken } from "./routes/auth.js";
+
+// Models
 import User from "./models/User.js";
+
+const DEV_MODE = process.env.DEV_MODE;
 
 type Mark = "X" | "O";
 
@@ -26,7 +30,10 @@ let waitingPlayer: Socket | null = null;
 // ========================================
 
 async function handleJoinGame(socket: Socket, io: Server) {
-  if (waitingPlayer && waitingPlayer.data.user.id !== socket.data.user.id) {
+  if (
+    waitingPlayer &&
+    (waitingPlayer.data.user.id !== socket.data.user.id || DEV_MODE)
+  ) {
     const roomId = `${waitingPlayer.id}#${socket.id}`;
     socket.join(roomId);
     waitingPlayer.join(roomId);
@@ -133,6 +140,7 @@ export function initSocket(io: Server) {
         }
 
         delete games[roomId];
+        return;
       }
 
       game.turn = game.turn === "X" ? "O" : "X";
