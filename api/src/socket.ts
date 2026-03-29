@@ -13,6 +13,7 @@ type Game = {
   board: (Mark | "")[];
   turn: Mark;
   players: { X: string; O: string };
+  timer: ReturnType<typeof setTimeout> | null;
 };
 
 const winningCombos = [
@@ -29,6 +30,23 @@ const games: Record<string, Game> = {};
 let waitingPlayer: Socket | null = null;
 // ========================================
 
+function startTimer(roomId: string, io: Server) {
+  const game = games[roomId];
+  if (!game) return;
+
+  if (game.timer) clearTimeout(game.timer);
+
+  game.timer = setTimeout(() => {
+    if (!games[roomId]) return;
+    game.turn = game.turn === "X" ? "O" : "X";
+    io.to(roomId).emit("move-made", {
+      board: game.board,
+      nextTurn: game.turn,
+    });
+    startTimer(roomId, io); // restart for next player
+  }, 15000);
+}
+
 function handleJoinGame(socket: Socket, io: Server) {
   if (
     waitingPlayer &&
@@ -42,6 +60,7 @@ function handleJoinGame(socket: Socket, io: Server) {
       board: Array(9).fill(""),
       turn: "X",
       players: { X: waitingPlayer.id, O: socket.id },
+      timer: null,
     };
 
     const getWinRate = (u: any) => {
@@ -66,6 +85,7 @@ function handleJoinGame(socket: Socket, io: Server) {
     });
 
     waitingPlayer = null;
+    startTimer(roomId, io);
   } else {
     waitingPlayer = socket;
   }
@@ -122,6 +142,8 @@ export function initSocket(io: Server) {
       if (result) {
         io.to(roomId).emit("game-over", { result, board: game.board });
 
+        if (game.timer) clearTimeout(game.timer);
+
         if (result === "Draw") {
           const xSocket = io.sockets.sockets.get(game.players.X);
           const oSocket = io.sockets.sockets.get(game.players.O);
@@ -166,6 +188,8 @@ export function initSocket(io: Server) {
         board: game.board,
         nextTurn: game.turn,
       });
+
+      startTimer(roomId, io);
     });
 
     socket.on("play-again", async () => handleJoinGame(socket, io));
@@ -173,6 +197,7 @@ export function initSocket(io: Server) {
     socket.on("leave-game", () => {
       const roomId = Array.from(socket.rooms).find((r) => r !== socket.id);
       if (roomId) {
+        if (games[roomId]?.timer) clearTimeout(games[roomId].timer);
         socket.to(roomId).emit("opponent-left");
         socket.leave(roomId);
         delete games[roomId];
@@ -185,6 +210,7 @@ export function initSocket(io: Server) {
       for (const roomId in games) {
         const game = games[roomId];
         if (game.players.X === socket.id || game.players.O === socket.id) {
+          if (game.timer) clearTimeout(game.timer);
           socket.to(roomId).emit("opponent-left");
           delete games[roomId];
         }
