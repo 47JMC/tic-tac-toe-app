@@ -1,8 +1,17 @@
 "use client";
 
+// Libraries
 import { useEffect, useState, useRef } from "react";
-import { io, Socket } from "socket.io-client";
+import { Socket } from "socket.io-client";
+import { initSocket } from "@/lib/socket";
+import Link from "next/link";
+
+// Types
+import { Spectator } from "@/lib/types";
+
+// Components
 import { useGameContext } from "./GameProvider";
+import SpectatorList from "./SpectatorsList";
 
 export default function Game() {
   const [status, setStatus] = useState("Connecting to server...");
@@ -12,6 +21,9 @@ export default function Game() {
   const [winner, setWinner] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15);
+  const [spectators, setSpectators] = useState<Spectator[]>([]);
+  const [spectatorCount, setSpectatorCount] = useState(0);
+  const [roomId, setRoomId] = useState<string | null>(null);
 
   const playerSymbolRef = useRef<"X" | "O" | null>(null);
   const currentTurnRef = useRef<"X" | "O">("X");
@@ -77,9 +89,8 @@ export default function Game() {
   };
 
   useEffect(() => {
-    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL!, {
-      withCredentials: true,
-    });
+    socketRef.current = initSocket();
+    socketRef.current.connect();
 
     socketRef.current.on("connect", () => {
       setStatus("Connected.");
@@ -90,8 +101,10 @@ export default function Game() {
       ({
         symbol,
         opponent,
+        roomId,
       }: {
         symbol: "X" | "O";
+        roomId: string;
         opponent: {
           id: string;
           username: string;
@@ -108,6 +121,7 @@ export default function Game() {
         setSearching(false);
         setStatus(symbol === "X" ? "Your turn" : "Opponent's turn");
         resetTimer();
+        setRoomId(roomId);
       },
     );
 
@@ -143,14 +157,25 @@ export default function Game() {
       clearInterval(timerRef.current!);
     });
 
+    socketRef.current.on(
+      "spectator-count",
+      ({ count, spectators }: { count: number; spectators: Spectator[] }) => {
+        setSpectatorCount(count);
+        setSpectators(spectators ?? []);
+      },
+    );
+
     return () => {
-      socketRef.current?.disconnect();
+      socketRef.current?.off();
     };
   }, [setOpponent]);
 
   return (
     <div className="flex flex-col items-center">
       <p className="text-lg mb-2 text-yellow-400 font-medium">{status}</p>
+      {playerSymbol && !winner && (
+        <SpectatorList spectators={spectators} count={spectatorCount} />
+      )}
       {playerSymbol && !winner && (
         <p
           className={`text-sm font-fredoka mb-2 ${timeLeft <= 5 ? "text-red-400" : "text-slate-400"}`}
@@ -160,12 +185,17 @@ export default function Game() {
       )}
 
       {!playerSymbol && !searching && (
-        <button
-          onClick={findGame}
-          className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
-        >
-          Find Game
-        </button>
+        <div className="flex font-fredoka flex-col gap-2">
+          <button
+            onClick={findGame}
+            className="px-4 py-2 bg-blue-600 rounded-lg border-blue-600 border-2 hover:border-orange-300 w-full hover:bg-blue-800 transition-all font-fredoka font-medium"
+          >
+            Find Game
+          </button>
+          <button className="p-2 rounded-lg font-medium border-2 border-blue-900 transition-all hover:bg-indigo-950 hover:border-green-600 bg-blue-900 ">
+            <Link href={`/spectate`}>Spectate</Link>
+          </button>
+        </div>
       )}
 
       {searching && (
@@ -214,6 +244,14 @@ export default function Game() {
                 Play Again
               </button>
             ) : null}
+            {playerSymbol && roomId && (
+              <button
+                onClick={() => navigator.clipboard.writeText(roomId)}
+                className="text-xs text-slate-400 hover:text-white transition-all mt-1"
+              >
+                📋 Copy room ID
+              </button>
+            )}
           </div>
         </>
       )}

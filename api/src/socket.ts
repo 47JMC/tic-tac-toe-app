@@ -9,11 +9,21 @@ const DEV_MODE = process.env.DEV_MODE;
 
 type Mark = "X" | "O";
 
+type User = {
+  id: string;
+  username: string;
+  avatar: string;
+  wins: number;
+  losses: number;
+  draws: number;
+};
+
 type Game = {
   board: (Mark | "")[];
   turn: Mark;
   players: { X: string; O: string };
   timer: ReturnType<typeof setTimeout> | null;
+  spectators: Map<string, User>;
 };
 
 const winningCombos = [
@@ -61,6 +71,7 @@ function handleJoinGame(socket: Socket, io: Server) {
       turn: "X",
       players: { X: waitingPlayer.id, O: socket.id },
       timer: null,
+      spectators: new Map(),
     };
 
     const getWinRate = (u: any) => {
@@ -74,13 +85,16 @@ function handleJoinGame(socket: Socket, io: Server) {
 
     waitingPlayer.emit("start-game", {
       symbol: "X",
-      opponent: { ...oUser, winRate: getWinRate(xUser) },
+      roomId,
+      opponent: { ...oUser, winRate: getWinRate(oUser) },
     });
+
     socket.emit("start-game", {
       symbol: "O",
+      roomId,
       opponent: {
         ...xUser,
-        winRate: getWinRate(oUser),
+        winRate: getWinRate(xUser),
       },
     });
 
@@ -140,9 +154,8 @@ export function initSocket(io: Server) {
       const result = checkWinner(game.board);
 
       if (result) {
-        io.to(roomId).emit("game-over", { result, board: game.board });
-
         if (game.timer) clearTimeout(game.timer);
+        io.to(roomId).emit("game-over", { result, board: game.board });
 
         if (result === "Draw") {
           const xSocket = io.sockets.sockets.get(game.players.X);
@@ -204,11 +217,79 @@ export function initSocket(io: Server) {
       }
     });
 
+    socket.on("get-rooms", () => {
+      const activeRooms = Object.entries(games).map(([roomId, game]) => ({
+        roomId,
+        spectators: game.spectators.size,
+        game: game.board,
+        turn: game.turn,
+      }));
+
+      socket.emit("rooms-list", activeRooms);
+    });
+
+    socket.on("spectate", ({ roomId }: { roomId: string }) => {
+      const game = games[roomId];
+      if (!game) return socket.emit("error", "Room not found");
+
+      const userId = socket.data.user.id;
+
+      // already spectating
+      if (game.spectators.has(userId))
+        return socket.emit("error", "Already spectating");
+
+      // prevent spectating a game you're playing in
+      const xSocket = io.sockets.sockets.get(game.players.X);
+      const oSocket = io.sockets.sockets.get(game.players.O);
+      if (
+        !DEV_MODE &&
+        (xSocket?.data.user.id === userId || oSocket?.data.user.id === userId)
+      ) {
+        return socket.emit("error", "You are a player in this game");
+      }
+
+      socket.join(roomId);
+      game.spectators.set(userId, { ...socket.data.user });
+
+      socket.emit("spectate-start", {
+        board: game.board,
+        currentTurn: game.turn,
+        players: { X: xSocket?.data.user, O: oSocket?.data.user },
+      });
+
+      io.to(roomId).emit("spectator-count", {
+        count: game.spectators.size,
+        spectators: Array.from(game.spectators.values()),
+      });
+    });
+
+    socket.on("leave-spectate", ({ roomId }: { roomId: string }) => {
+      const game = games[roomId];
+      if (game) {
+        game.spectators.delete(socket.data.user.id);
+        io.to(roomId).emit("spectator-count", {
+          count: game.spectators.size,
+          spectators: Array.from(game.spectators.values()),
+        });
+      }
+      socket.leave(roomId);
+    });
+
     socket.on("disconnect", () => {
       if (waitingPlayer?.id === socket.id) waitingPlayer = null;
 
       for (const roomId in games) {
         const game = games[roomId];
+
+        if (game.spectators.has(socket.data.user.id)) {
+          game.spectators.delete(socket.data.user.id);
+          io.to(roomId).emit("spectator-count", {
+            count: game.spectators.size,
+            spectators: Array.from(game.spectators.values()),
+          });
+          continue;
+        }
+
         if (game.players.X === socket.id || game.players.O === socket.id) {
           if (game.timer) clearTimeout(game.timer);
           socket.to(roomId).emit("opponent-left");
