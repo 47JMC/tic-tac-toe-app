@@ -297,5 +297,19 @@ export function initSocket(io: Server) {
         }
       }
     });
+
+    socket.on("chat-message", ({ message }: { message: string }) => {
+      if (!socket.data.user.premium)
+        return socket.emit("error", "Premium only");
+      if (!message.trim() || message.length > 200) return;
+
+      const roomId = Array.from(socket.rooms).find((r) => r !== socket.id);
+      if (!roomId || !games[roomId]) return;
+
+      io.to(roomId).emit("chat-message", {
+        user: socket.data.user,
+        message: message.trim(),
+      });
+    });
   });
 }

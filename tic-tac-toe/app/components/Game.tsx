@@ -12,6 +12,7 @@ import { Spectator } from "@/lib/types";
 // Components
 import { useGameContext } from "./GameProvider";
 import SpectatorList from "./SpectatorsList";
+import PremiumChat from "./PremiumChat";
 
 export default function Game() {
   const [status, setStatus] = useState("Connecting to server...");
@@ -171,7 +172,7 @@ export default function Game() {
   }, [setOpponent]);
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center w-full">
       <p className="text-lg mb-2 text-yellow-400 font-medium">{status}</p>
       {playerSymbol && !winner && (
         <SpectatorList spectators={spectators} count={spectatorCount} />
@@ -206,52 +207,59 @@ export default function Game() {
 
       {playerSymbol && (
         <>
-          <p className="text-sm mb-4 text-slate-400">
-            You are: <span className="font-semibold">{playerSymbol}</span>
-          </p>
+          <div className="flex flex-col items-center">
+            <p className="text-sm mb-4 text-slate-400">
+              You are: <span className="font-semibold">{playerSymbol}</span>
+            </p>
 
-          <div className="grid grid-cols-3 gap-3 bg-slate-900 p-4 rounded-2xl shadow-lg">
-            {board.map((cell, index) => (
-              <div
-                key={index}
-                onClick={() => handleClick(index)}
-                className={`h-20 w-20 flex items-center justify-center text-3xl font-fredoka rounded-xl border-2 border-slate-600 bg-slate-800 transition-all duration-200
-                  ${playerSymbol === currentTurn && !winner ? "cursor-pointer hover:bg-slate-700 hover:border-blue-600" : "opacity-50 cursor-not-allowed"}`}
-              >
-                <span
-                  className={
-                    cell === "X"
-                      ? "text-blue-400"
-                      : cell === "O"
-                        ? "text-pink-400"
-                        : ""
-                  }
+            <div className="grid grid-cols-3 gap-3 bg-slate-900 p-4 rounded-2xl shadow-lg">
+              {board.map((cell, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleClick(index)}
+                  className={`h-20 w-20 flex items-center justify-center text-3xl font-fredoka rounded-xl border-2 border-slate-600 bg-slate-800 transition-all duration-200
+              ${playerSymbol === currentTurn && !winner ? "cursor-pointer hover:bg-slate-700 hover:border-blue-600" : "opacity-50 cursor-not-allowed"}`}
                 >
-                  {cell}
-                </span>
-              </div>
-            ))}
+                  <span
+                    className={
+                      cell === "X"
+                        ? "text-blue-400"
+                        : cell === "O"
+                          ? "text-pink-400"
+                          : ""
+                    }
+                  >
+                    {cell}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6">
+              {winner ? (
+                <button
+                  onClick={
+                    winner === "opponent-left" ? findNewOpponent : playAgain
+                  }
+                  className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
+                >
+                  Play Again
+                </button>
+              ) : null}
+              {roomId && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(roomId)}
+                  className="text-xs text-slate-400 hover:text-white transition-all mt-1"
+                >
+                  📋 Copy room ID
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="mt-6">
-            {winner ? (
-              <button
-                onClick={
-                  winner === "opponent-left" ? findNewOpponent : playAgain
-                }
-                className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-800 transition-all font-medium"
-              >
-                Play Again
-              </button>
-            ) : null}
-            {playerSymbol && roomId && (
-              <button
-                onClick={() => navigator.clipboard.writeText(roomId)}
-                className="text-xs text-slate-400 hover:text-white transition-all mt-1"
-              >
-                📋 Copy room ID
-              </button>
-            )}
+          {/* Chat fixed to right */}
+          <div className="hidden lg:block fixed right-4 top-1/2 -translate-y-1/2">
+            <PremiumChat socketRef={socketRef} />
           </div>
         </>
       )}

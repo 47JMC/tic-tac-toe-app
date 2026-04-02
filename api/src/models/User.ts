@@ -7,6 +7,7 @@ const userSchema = new Schema({
   wins: { type: Number, default: 0 },
   losses: { type: Number, default: 0 },
   draws: { type: Number, default: 0 },
+  premium: { type: Boolean, default: false },
 });
 
 export default model("User", userSchema);

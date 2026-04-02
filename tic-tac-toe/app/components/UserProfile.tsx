@@ -23,7 +23,9 @@ function UserProfile() {
           { credentials: "include" },
         );
         if (!res.ok) return setUserData(null);
-        setUserData(await res.json());
+        const data = await res.json();
+
+        setUserData(data);
       } catch {
         setUserData(null);
       }
@@ -52,7 +54,7 @@ function UserProfile() {
           </div>
           <Image
             src={`https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.webp?size=80`}
-            alt={userData.username}
+            alt={userData.username || "User Avatar"}
             width={48}
             height={48}
             className="rounded-full w-10 h-10 sm:w-16 sm:h-16"
