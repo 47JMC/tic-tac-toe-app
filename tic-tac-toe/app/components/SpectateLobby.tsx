@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { initSocket } from "@/lib/socket";
-import * as motion from "motion/react-client";
 
 type Room = {
   roomId: string;
@@ -67,11 +66,8 @@ export default function SpectateLobby() {
             No active games right now.
           </p>
         ) : (
-          rooms.map((room, i) => (
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.1, ease: "easeOut" }}
+          rooms.map((room) => (
+            <div
               key={room.roomId}
               onClick={() => spectate(room.roomId)}
               className="flex items-center justify-between bg-slate-800 px-4 py-3 rounded-xl border border-slate-600 hover:border-blue-500 cursor-pointer transition-all"
@@ -86,7 +82,7 @@ export default function SpectateLobby() {
                   👁 {room.spectators} watching
                 </p>
               </div>
-            </motion.div>
+            </div>
           ))
         )}
       </div>
