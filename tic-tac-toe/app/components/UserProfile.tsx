@@ -61,11 +61,12 @@ function UserProfile() {
           />
         </>
       ) : (
-        <button className="rounded-lg p-2 m-2 bg-green-500 hover:bg-green-700 transition-colors text-sm">
-          <Link href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`}>
-            Login
-          </Link>
-        </button>
+        <Link
+          href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`}
+          className="inline-block rounded-lg px-4 py-3 m-2 bg-green-500 hover:bg-green-700 transition-colors text-base text-white"
+        >
+          Login
+        </Link>
       )}
     </div>
   );

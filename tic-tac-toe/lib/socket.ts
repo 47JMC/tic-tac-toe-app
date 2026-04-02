@@ -11,11 +11,12 @@ export function initSocket(): Socket {
 
   if (socket) return socket;
 
-  // if not initialized, create a new socket connection
-
   socket = io(API_BASE_URL, {
     withCredentials: true,
-    autoConnect: false, // don't connect immediately
+    autoConnect: false,
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 2000,
   });
 
   return socket;
