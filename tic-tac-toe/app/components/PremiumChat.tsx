@@ -33,7 +33,6 @@ export default function PremiumChat({ socketRef }: Props) {
         }
 
         const data = await res.json();
-        console.log("User data:", data);
         setIsPremium(data.premium);
       } catch {
         setIsPremium(false);
